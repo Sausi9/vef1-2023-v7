@@ -126,10 +126,13 @@ const cart = {
  */
 function formatPrice(price) {
   /* Útfæra */
-  const formattedPrice = price.toLocaleString("is-IS", {
-    style: "currency",
-    currency: "ISK",
-  });
+  const formattedPrice = price.toLocaleString('is-IS', {
+    style: 'decimal',
+    useGrouping: true, // Enable thousands separator (comma in this case).
+    minimumFractionDigits: 0, // Ensures no decimal places for whole numbers.
+    maximumFractionDigits: 0,
+  }).replace(',', '.') + ' kr.';
+  return formattedPrice
 }
 
 /**
@@ -163,7 +166,7 @@ function formatProduct(product, quantity = undefined) {
       product.price
     )} samtals ${total}`;
   }
-  return `${product.title} - ${product.price}`;
+  return `${product.title} - ${formatPrice(product.price)}`;
 }
 
 /**
@@ -181,7 +184,7 @@ function cartInfo(cart) {
   /* Útfæra */
   const prods = [];
   for (const item of cart.lines) {
-    prods.push(formatProduct(item.product));
+    prods.push(formatProduct(item.product,item.quantity));
   }
   return prods
 }
@@ -277,7 +280,10 @@ function addProduct() {
 function showProducts() {
   /* Útfæra */
   /* Hér ætti að nota `formatPrice` hjálparfall */
-  console.
+  for (const prod of products){
+    console.info(`#${prod.id} ${prod.title} - ${prod.description} - ${formatPrice(prod.price)}`)
+  }
+  
 }
 
 /**
@@ -299,6 +305,46 @@ function addProductToCart() {
   /* Útfæra */
   /* Hér ætti að nota `validateInteger` hjálparfall til að staðfesta gögn frá notanda */
   /* Til að athuga hvort vara sé til í `cart` þarf að nota `cart.lines.find` */
+  const num = prompt("Auðkenni vöru:");
+  const identity = Number.parseInt(num, 10);
+
+  // Athugum hvort við fáum löglega heiltölu sem er stærri en 0 með því að nota hjálparfallið okkar.
+  if (!validateInteger(identity, 1)) {
+    console.error("Auðkenni vöru er ekki löglegt, verður að vera heiltala stærri en 0");
+    return;
+  }
+  
+  if(identity > products.length){
+    console.error(`Auðkenni vöru er ekki til, verður að vera á milli 0 og ${products.length - 1}`)
+    return;
+  }
+
+  const num2 = prompt("Fjöldi af vöru:");
+  const quant = Number.parseInt(num2,10);
+
+  if (!validateInteger(quant, 1)) {
+    console.error("Magn vöru er ekki löglegt, verður að vera heiltala stærri en 0");
+    return;
+  }
+
+  if( quant < 1|| quant > 99){
+    console.error("Fjöldi er ekki löglegur, lágmark 1 og hámark 99.")
+  }
+
+  if (!cart.lines.find(element => element.product === products[identity])){
+    const newcartline = {
+      product: products[identity],
+      quantity: quant
+    };
+    cart.lines.push(newcartline)
+    console.info(`Vöru bætt við körfu:`)
+    console.info(`${formatProduct(products[identity],quant)}`)
+  }
+  if(quant !== cart.lines.find(element => element.product === products[identity]).quantity){
+    cart.lines.find(element => element.product === products[identity]).quantity = quant;
+    console.info(`Vöru fjöldi uppfærður:`)
+    console.info(`${formatProduct(products[identity],quant)}`)
+  }
 }
 
 /**
@@ -315,6 +361,17 @@ function addProductToCart() {
  */
 function showCart() {
   /* Útfæra */
+  if (cart.lines.length !== 0){
+    var price = 0
+    for (const line of cart.lines){
+      console.info(`${formatProduct(line.product,line.quantity)}`)
+      price = price + line.quantity * line.product.price
+    }
+    console.info(`Samtals verð: ${formatPrice(price)}`)
+  }
+  else{
+    console.info("Ekkert í körfu")
+  }
 }
 
 /**
@@ -337,4 +394,24 @@ function showCart() {
  */
 function checkout() {
   /* Útfæra */
+  if (cart.lines.length == 0){
+    console.info("Karfan er tóm.")
+    return;
+  };
+
+  const name = prompt("Nafn:")
+
+  if (!name) {
+    console.error("Ekkert nafn til staðar, nauðsynlegt er að hafa nafn");
+    return;
+  }
+  const address = prompt("Heimilisfang:")
+
+  if (!address) {
+    console.error("Ekkert heimilisfang til staðar, nauðsynlegt er að hafa heimilisfang");
+    return;
+  }
+  console.info(`Pöntun móttekin ${name}\n`);
+  console.info(`Vörur verða sendar á ${address}`);
+  showCart()
 }
